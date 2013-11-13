@@ -2,20 +2,20 @@
  *  Copyright (C) 2013 Typesafe, Inc <http://typesafe.com>
  */
 package com.typesafe.sbt
-package atmos
+package echo
 
 import sbt._
-import AtmosProcess.Forked
-import AtmosRun.AtmosInputs
+import EchoProcess.Forked
+import EchoRun.EchoInputs
 
-object AtmosController {
-  private var global: Option[AtmosController] = None
+object EchoController {
+  private var global: Option[EchoController] = None
   private var explicitlyStarted: Boolean = false
   private var launchedRuns: Seq[Forked] = Seq.empty
 
-  def start(inputs: AtmosInputs, log: Logger, explicit: Boolean = false): Unit = synchronized {
+  def start(inputs: EchoInputs, log: Logger, explicit: Boolean = false): Unit = synchronized {
     if (global.isEmpty) {
-      val controller = new AtmosController(inputs)
+      val controller = new EchoController(inputs)
       controller.start(log)
       explicitlyStarted = explicit
       global = Some(controller)
@@ -75,8 +75,8 @@ object AtmosController {
   }
 }
 
-class AtmosController(val inputs: AtmosInputs) {
-  import AtmosController.{ busy, spinUntil }
+class EchoController(val inputs: EchoInputs) {
+  import EchoController.{ busy, spinUntil }
 
   private var atmos: Forked = _
   private var console: Forked = _

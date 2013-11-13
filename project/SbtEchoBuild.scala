@@ -2,31 +2,31 @@ import sbt._
 import sbt.Keys._
 import net.virtualvoid.sbt.cross.CrossPlugin
 
-object SbtAtmosBuild extends Build {
-  val Version = "0.3.3-SNAPSHOT"
+object SbtEchoBuild extends Build {
+  val Version = "0.1.0-SNAPSHOT"
 
-  lazy val sbtAtmos = Project(
-    id = "sbt-atmos",
+  lazy val sbtEcho = Project(
+    id = "sbt-echo",
     base = file("."),
     settings = defaultSettings ++ noPublishSettings,
-    aggregate = Seq(sbtAtmosAkka, sbtAtmosPlay)
+    aggregate = Seq(sbtEchoAkka, sbtEchoPlay)
   )
 
-  lazy val sbtAtmosAkka = Project(
-    id = "sbt-atmos-akka",
+  lazy val sbtEchoAkka = Project(
+    id = "sbt-echo-akka",
     base = file("akka"),
     settings = defaultSettings ++ Seq(
-      name := "sbt-atmos",
+      name := "sbt-echo",
       libraryDependencies += Dependency.aspectjTools
     )
   )
 
-  lazy val sbtAtmosPlay = Project(
-    id = "sbt-atmos-play",
+  lazy val sbtEchoPlay = Project(
+    id = "sbt-echo-play",
     base = file("play"),
-    dependencies = Seq(sbtAtmosAkka),
+    dependencies = Seq(sbtEchoAkka),
     settings = defaultSettings ++ Seq(
-      name := "sbt-atmos-play"
+      name := "sbt-echo-play"
     ) ++ Dependency.playPlugin
   )
 

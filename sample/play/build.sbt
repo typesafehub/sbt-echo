@@ -6,4 +6,5 @@ version := "1.0"
 
 playScalaSettings
 
-atmosPlaySettings
+echoPlaySettings
+

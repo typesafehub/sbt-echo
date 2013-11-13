@@ -2,28 +2,28 @@
  *  Copyright (C) 2013 Typesafe, Inc <http://typesafe.com>
  */
 package com.typesafe.sbt
-package atmos
+package echo
 
 import sbt._
 import sbt.Keys._
 import play.Project.ClassLoaderCreator
 import org.aspectj.weaver.loadtime.WeavingURLClassLoader
 
-object AtmosPlayRun {
-  import AtmosRun._
-  import SbtAtmos.Atmos
-  import SbtAtmos.AtmosKeys._
+object EchoPlayRun {
+  import EchoRun._
+  import SbtEcho.Echo
+  import SbtEcho.EchoKeys._
 
   val Play21Version = "2.1.4"
   val Play22Version = "2.2.0"
 
-  def atmosPlayRunSettings(): Seq[Setting[_]] = Seq(
-    weavingClassLoader in Atmos <<= (sigar in Atmos) map createWeavingClassLoader
-  ) ++ AtmosPlaySpecific.atmosPlaySpecificSettings
+  def echoPlayRunSettings(): Seq[Setting[_]] = Seq(
+    weavingClassLoader in Echo <<= (sigar in Echo) map createWeavingClassLoader
+  ) ++ EchoPlaySpecific.echoPlaySpecificSettings
 
-  def tracePlayDependencies(dependencies: Seq[ModuleID], playVersion: String, atmosVersion: String): Seq[ModuleID] = {
+  def tracePlayDependencies(dependencies: Seq[ModuleID], playVersion: String, echoVersion: String): Seq[ModuleID] = {
     if (containsTracePlay(dependencies)) Seq.empty[ModuleID]
-    else Seq("com.typesafe.atmos" % ("trace-play-" + playVersion) % atmosVersion % AtmosTraceCompile.name cross CrossVersion.Disabled)
+    else Seq("com.typesafe.atmos" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled)
   }
 
   def supportedPlayVersion(playVersion: String): String = {
@@ -45,17 +45,17 @@ object AtmosPlayRun {
     override def toString = "Weaving" + name + "{" + getURLs.map(_.toString).mkString(", ") + "}"
   }
 
-  def createRunHook = (atmosInputs in Atmos, sigarLibs in Atmos, state) map { (inputs, sigar, s) =>
+  def createRunHook = (echoInputs in Echo, sigarLibs in Echo, state) map { (inputs, sigar, s) =>
     new RunHook(inputs, sigar, s.log)
   }
 
-  class RunHook(inputs: AtmosInputs, sigarLibs: Option[File], log: Logger) extends play.PlayRunHook {
+  class RunHook(inputs: EchoInputs, sigarLibs: Option[File], log: Logger) extends play.PlayRunHook {
     override def beforeStarted(): Unit = {
       System.setProperty("org.aspectj.tracing.factory", "default")
       sys.props.getOrElseUpdate("config.resource", "application.conf")
       sigarLibs foreach { s => System.setProperty("org.hyperic.sigar.path", s.getAbsolutePath) }
-      AtmosController.start(inputs, log)
+      EchoController.start(inputs, log)
     }
-    override def afterStopped(): Unit = AtmosController.stop(log)
+    override def afterStopped(): Unit = EchoController.stop(log)
   }
 }

@@ -2,13 +2,13 @@
  *  Copyright (C) 2013 Typesafe, Inc <http://typesafe.com>
  */
 package com.typesafe.sbt
-package atmos
+package echo
 
 import sbt._
 import java.lang.reflect.{ Method, Modifier }
 import java.lang.{ Runtime => JRuntime }
 
-object AtmosProcess {
+object EchoProcess {
   class Forked(name: String, config: ForkScalaRun, temporary: Boolean) {
     private var workingDirectory: Option[File] = None
     private var process: Process = _

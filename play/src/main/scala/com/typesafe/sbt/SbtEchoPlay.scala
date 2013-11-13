@@ -7,13 +7,13 @@ import sbt._
 import sbt.Keys._
 import play.Project.playVersion
 
-object SbtAtmosPlay extends Plugin {
-  import SbtAtmos._
-  import SbtAtmos.AtmosKeys._
-  import atmos.AtmosPlayRun._
-  import atmos.AtmosRun.AtmosTraceCompile
+object SbtEchoPlay extends Plugin {
+  import SbtEcho._
+  import SbtEcho.EchoKeys._
+  import echo.EchoPlayRun._
+  import echo.EchoRun.EchoTraceCompile
 
-  lazy val atmosPlaySettings: Seq[Setting[_]] = atmosCompileSettings ++ inConfig(Atmos)(tracePlaySettings) ++ atmosPlayRunSettings
+  lazy val echoPlaySettings: Seq[Setting[_]] = echoCompileSettings ++ inConfig(Echo)(tracePlaySettings) ++ echoPlayRunSettings
 
   def tracePlaySettings(): Seq[Setting[_]] = Seq(
     tracePlayVersion <<= playVersion map supportedPlayVersion,

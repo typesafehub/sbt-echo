@@ -7,21 +7,24 @@ import sbt._
 import sbt.Keys._
 import java.net.URI
 
-object SbtAtmos extends Plugin {
-  import atmos.AtmosController
-  import atmos.AtmosRun._
-  import atmos.DevNullLogger
+object SbtEcho extends Plugin {
+  import echo.EchoController
+  import echo.EchoRun._
+  import echo.DevNullLogger
 
   val AtmosVersion = "1.3.1"
 
-  val Atmos = config("atmos").extend(Compile)
-  val AtmosTest = config("atmos-test").extend(Atmos, Test)
+  val Echo = config("echo").extend(Compile)
+  val EchoTest = config("echo-test").extend(Echo, Test)
 
-  object AtmosKeys {
+  object EchoKeys {
     val atmosVersion = SettingKey[String]("atmos-version")
     val atmosUseProGuardedVersion = SettingKey[Boolean]("atmos-use-proguarded-version")
     val aspectjVersion = SettingKey[String]("aspectj-version")
-    val atmosDirectory = SettingKey[File]("atmos-directory")
+
+    val echoDirectory = SettingKey[File]("echo-directory")
+    val echoConfigDirectory = SettingKey[File]("echo-config-directory")
+    val echoLogDirectory = SettingKey[File]("echo-log-directory")
 
     val traceOnly = TaskKey[Boolean]("trace-only")
 
@@ -34,8 +37,6 @@ object SbtAtmos extends Plugin {
     val tracePort = TaskKey[Int]("trace-port")
 
     val atmosJvmOptions = TaskKey[Seq[String]]("atmos-jvm-options")
-    val atmosConfigDirectory = SettingKey[File]("atmos-config-directory")
-    val atmosLogDirectory = SettingKey[File]("atmos-log-directory")
     val atmosConfigString = TaskKey[String]("atmos-config-string")
     val atmosLogbackString = SettingKey[String]("atmos-logback-string")
     val atmosConfig = TaskKey[File]("atmos-config")
@@ -69,10 +70,10 @@ object SbtAtmos extends Plugin {
     val traceAkkaVersion = TaskKey[Option[String]]("trace-akka-version")
     val traceDependencies = TaskKey[Seq[ModuleID]]("trace-dependencies")
 
-    val atmosOptions = TaskKey[AtmosOptions]("atmos-options")
-    val consoleOptions = TaskKey[AtmosOptions]("console-options")
-    val atmosRunListeners = TaskKey[Seq[URI => Unit]]("atmos-run-listeners")
-    val atmosInputs = TaskKey[AtmosInputs]("atmos-inputs")
+    val atmosOptions = TaskKey[EchoOptions]("atmos-options")
+    val consoleOptions = TaskKey[EchoOptions]("console-options")
+    val echoRunListeners = TaskKey[Seq[URI => Unit]]("echo-run-listeners")
+    val echoInputs = TaskKey[EchoInputs]("echo-inputs")
 
     val start = TaskKey[Unit]("start")
     val stop = TaskKey[Unit]("stop")
@@ -88,27 +89,29 @@ object SbtAtmos extends Plugin {
     val weavingClassLoader = TaskKey[(String, Array[URL], ClassLoader) => ClassLoader]("weaving-class-loader")
   }
 
-  import AtmosKeys._
+  import EchoKeys._
 
-  lazy val atmosSettings: Seq[Setting[_]] = atmosCompileSettings
+  lazy val echoSettings: Seq[Setting[_]] = echoCompileSettings
 
-  def atmosCompileSettings: Seq[Setting[_]] =
-    inConfig(Atmos)(atmosDefaultSettings(Runtime, AtmosTraceCompile)) ++
-    inConfig(Atmos)(atmosRunSettings(Compile)) ++
-    inConfig(Atmos)(atmosLaunchSettings) ++
-    atmosUnscopedSettings
+  def echoCompileSettings: Seq[Setting[_]] =
+    inConfig(Echo)(echoDefaultSettings(Runtime, EchoTraceCompile)) ++
+    inConfig(Echo)(echoRunSettings(Compile)) ++
+    inConfig(Echo)(echoLaunchSettings) ++
+    echoUnscopedSettings
 
-  def atmosTestSettings: Seq[Setting[_]] =
-    inConfig(AtmosTest)(atmosDefaultSettings(Test, AtmosTraceTest)) ++
-    inConfig(AtmosTest)(atmosRunSettings(Test)) ++
-    inConfig(AtmosTest)(atmosLaunchSettings)
+  def echoTestSettings: Seq[Setting[_]] =
+    inConfig(EchoTest)(echoDefaultSettings(Test, EchoTraceTest)) ++
+    inConfig(EchoTest)(echoRunSettings(Test)) ++
+    inConfig(EchoTest)(echoLaunchSettings)
 
-  def atmosDefaultSettings(extendConfig: Configuration, classpathConfig: Configuration): Seq[Setting[_]] = Seq(
+  def echoDefaultSettings(extendConfig: Configuration, classpathConfig: Configuration): Seq[Setting[_]] = Seq(
     atmosVersion := AtmosVersion,
     atmosUseProGuardedVersion := true,
     aspectjVersion := "1.7.3",
 
-    atmosDirectory <<= target / targetName(extendConfig),
+    echoDirectory <<= target / targetName(extendConfig),
+    echoConfigDirectory <<= echoDirectory / "conf",
+    echoLogDirectory <<= echoDirectory / "log",
 
     traceOnly := false,
 
@@ -116,20 +119,18 @@ object SbtAtmos extends Plugin {
     defaultConsolePort := 9900,
     defaultTracePort := 28660,
 
-    atmosPort <<= defaultAtmosPort map AtmosController.selectPort,
-    consolePort <<= defaultConsolePort map AtmosController.selectPort,
+    atmosPort <<= defaultAtmosPort map EchoController.selectPort,
+    consolePort <<= defaultConsolePort map EchoController.selectPort,
     tracePort <<= (traceOnly, defaultTracePort) map { (traceOnly, defaultPort) =>
-      if (traceOnly) defaultPort else AtmosController.selectTracePort(defaultPort)
+      if (traceOnly) defaultPort else EchoController.selectTracePort(defaultPort)
     },
 
     atmosJvmOptions := Seq("-Xms512m", "-Xmx1024m", "-XX:+UseParallelGC"),
-    atmosConfigDirectory <<= atmosDirectory / "conf",
-    atmosLogDirectory <<= atmosDirectory / "log",
-    atmosConfigString <<= tracePort map defaultAtmosConfig,
+    atmosConfigString <<= tracePort map defaultEchoConfig,
     atmosLogbackString <<= defaultLogbackConfig("atmos"),
     atmosConfig <<= writeConfig("atmos", atmosConfigString, atmosLogbackString),
     atmosConfigClasspath <<= atmosConfig map createClasspath,
-    atmosManagedClasspath <<= collectManagedClasspath(AtmosDev),
+    atmosManagedClasspath <<= collectManagedClasspath(EchoAtmos),
     atmosClasspath <<= Classpaths.concat(atmosConfigClasspath, atmosManagedClasspath),
 
     consoleJvmOptions := Seq("-Xms256m", "-Xmx512m"),
@@ -137,7 +138,7 @@ object SbtAtmos extends Plugin {
     consoleLogbackString <<= defaultLogbackConfig("console"),
     consoleConfig <<= writeConfig("console", consoleConfigString, consoleLogbackString),
     consoleConfigClasspath <<= consoleConfig map createClasspath,
-    consoleManagedClasspath <<= collectManagedClasspath(AtmosConsole),
+    consoleManagedClasspath <<= collectManagedClasspath(EchoConsole),
     consoleClasspath <<= Classpaths.concat(consoleConfigClasspath, consoleManagedClasspath),
 
     node <<= name,
@@ -147,7 +148,7 @@ object SbtAtmos extends Plugin {
     samplingConfigString <<= sampling apply { s => seqToConfig(s, indent = 6, quote = true) },
     traceConfigString <<= (node, traceableConfigString, samplingConfigString, tracePort) map defaultTraceConfig,
     includeConfig := Seq.empty,
-    traceConfigIncludes <<= includeConfig map includeAtmosConfig,
+    traceConfigIncludes <<= includeConfig map includeEchoConfig,
     traceConfig <<= writeTraceConfig("trace", traceConfigString, traceConfigIncludes),
     traceConfigClasspath <<= traceConfig map createClasspath,
     aspectjWeaver <<= findAspectjWeaver,
@@ -168,46 +169,46 @@ object SbtAtmos extends Plugin {
     exportedProducts <<= exportedProducts in extendConfig,
     fullClasspath <<= Classpaths.concatDistinct(exportedProducts, dependencyClasspath),
 
-    atmosOptions <<= (atmosPort, atmosJvmOptions, atmosClasspath) map AtmosOptions,
-    consoleOptions <<= (consolePort, consoleJvmOptions, consoleClasspath) map AtmosOptions,
-    atmosRunListeners := Seq.empty,
-    atmosRunListeners <+= state map { s => logConsoleUri(s.log)(_) },
-    atmosInputs <<= (traceOnly, tracePort, javaHome, atmosOptions, consoleOptions, atmosRunListeners) map AtmosInputs,
+    atmosOptions <<= (atmosPort, atmosJvmOptions, atmosClasspath) map EchoOptions,
+    consoleOptions <<= (consolePort, consoleJvmOptions, consoleClasspath) map EchoOptions,
+    echoRunListeners := Seq.empty,
+    echoRunListeners <+= state map { s => logConsoleUri(s.log)(_) },
+    echoInputs <<= (traceOnly, tracePort, javaHome, atmosOptions, consoleOptions, echoRunListeners) map EchoInputs,
 
-    start <<= (atmosInputs, streams) map { (inputs, s) => AtmosController.start(inputs, s.log, explicit = true) },
-    stop <<= streams map { s => AtmosController.stop(s.log, explicit = true) }
+    start <<= (echoInputs, streams) map { (inputs, s) => EchoController.start(inputs, s.log, explicit = true) },
+    stop <<= streams map { s => EchoController.stop(s.log, explicit = true) }
   )
 
-  def atmosRunSettings(extendConfig: Configuration): Seq[Setting[_]] = Seq(
+  def echoRunSettings(extendConfig: Configuration): Seq[Setting[_]] = Seq(
     mainClass in run <<= mainClass in run in extendConfig,
-    inTask(run)(Seq(runner <<= atmosRunner)).head,
+    inTask(run)(Seq(runner <<= echoRunner)).head,
     run <<= Defaults.runTask(fullClasspath, mainClass in run, runner in run),
     runMain <<= Defaults.runMainTask(fullClasspath, runner in run)
   )
 
-  def atmosLaunchSettings(): Seq[Setting[_]] = Seq(
+  def echoLaunchSettings(): Seq[Setting[_]] = Seq(
     mainClass in launch <<= mainClass in run,
     outputStrategy in launch := Some(LoggedOutput(DevNullLogger)),
     launchNode := { (name, mainClass, args) => name },
-    inTask(launch)(Seq(runner <<= atmosLauncher)).head,
+    inTask(launch)(Seq(runner <<= echoLauncher)).head,
     launch <<= Defaults.runTask(fullClasspath, mainClass in launch, runner in launch),
     launchMain <<= Defaults.runMainTask(fullClasspath, runner in launch)
   )
 
-  def atmosUnscopedSettings: Seq[Setting[_]] = Seq(
-    ivyConfigurations ++= Seq(AtmosTraceCompile, AtmosTraceTest, AtmosDev, AtmosConsole, AtmosWeave, AtmosSigar),
+  def echoUnscopedSettings: Seq[Setting[_]] = Seq(
+    ivyConfigurations ++= Seq(EchoTraceCompile, EchoTraceTest, EchoAtmos, EchoConsole, EchoWeave, EchoSigar),
 
     resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases",
 
-    libraryDependencies <++= (atmosVersion in Atmos, atmosUseProGuardedVersion in Atmos)(atmosDependencies),
-    libraryDependencies <++= (atmosVersion in Atmos, atmosUseProGuardedVersion in Atmos)(consoleDependencies),
-    libraryDependencies <++= (aspectjVersion in Atmos)(weaveDependencies),
-    libraryDependencies <++= (atmosVersion in Atmos)(sigarDependencies),
+    libraryDependencies <++= (atmosVersion in Echo, atmosUseProGuardedVersion in Echo)(atmosDependencies),
+    libraryDependencies <++= (atmosVersion in Echo, atmosUseProGuardedVersion in Echo)(consoleDependencies),
+    libraryDependencies <++= (aspectjVersion in Echo)(weaveDependencies),
+    libraryDependencies <++= (atmosVersion in Echo)(sigarDependencies),
 
-    allDependencies <++= traceDependencies in Atmos
+    allDependencies <++= traceDependencies in Echo
   )
 
   def traceAkka(akkaVersion: String) = {
-    traceAkkaVersion in Atmos := Option(akkaVersion) map supportedAkkaVersion
+    traceAkkaVersion in Echo := Option(akkaVersion) map supportedAkkaVersion
   }
 }

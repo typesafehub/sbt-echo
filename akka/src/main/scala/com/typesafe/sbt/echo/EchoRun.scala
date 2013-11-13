@@ -2,7 +2,7 @@
  *  Copyright (C) 2013 Typesafe, Inc <http://typesafe.com>
  */
 package com.typesafe.sbt
-package atmos
+package echo
 
 import sbt._
 import sbt.Keys._
@@ -10,31 +10,31 @@ import sbt.Project.Initialize
 import java.net.{ URI, URLClassLoader }
 import org.aspectj.weaver.loadtime.WeavingURLClassLoader
 
-object AtmosRun {
-  import AtmosProcess.{ Forked, RunMain }
-  import SbtAtmos.Atmos
-  import SbtAtmos.AtmosKeys._
+object EchoRun {
+  import EchoProcess.{ Forked, RunMain }
+  import SbtEcho.Echo
+  import SbtEcho.EchoKeys._
 
   val Akka20Version = "2.0.5"
   val Akka21Version = "2.1.4"
   val Akka22Version = "2.2.1"
 
-  val AtmosTraceCompile = config("atmos-trace-compile").extend(Configurations.RuntimeInternal).hide
-  val AtmosTraceTest    = config("atmos-trace-test").extend(AtmosTraceCompile, Configurations.TestInternal).hide
+  val EchoTraceCompile = config("echo-trace-compile").extend(Configurations.RuntimeInternal).hide
+  val EchoTraceTest    = config("echo-trace-test").extend(EchoTraceCompile, Configurations.TestInternal).hide
 
-  val AtmosDev     = config("atmos-dev").hide
-  val AtmosConsole = config("atmos-console").hide
-  val AtmosWeave   = config("atmos-weave").hide
-  val AtmosSigar   = config("atmos-sigar").hide
+  val EchoAtmos   = config("echo-atmos").hide
+  val EchoConsole = config("echo-console").hide
+  val EchoWeave   = config("echo-weave").hide
+  val EchoSigar   = config("echo-sigar").hide
 
-  case class AtmosOptions(port: Int, options: Seq[String], classpath: Classpath)
+  case class EchoOptions(port: Int, options: Seq[String], classpath: Classpath)
 
-  case class AtmosInputs(traceOnly: Boolean, tracePort: Int, javaHome: Option[File], atmos: AtmosOptions, console: AtmosOptions, runListeners: Seq[URI => Unit])
+  case class EchoInputs(traceOnly: Boolean, tracePort: Int, javaHome: Option[File], atmos: EchoOptions, console: EchoOptions, runListeners: Seq[URI => Unit])
 
   case class Sigar(dependency: Option[File], nativeLibraries: Option[File])
 
   def targetName(config: Configuration) = {
-    "atmos" + (if (config.name == "runtime") "" else "-" + config.name)
+    "echo" + (if (config.name == "runtime") "" else "-" + config.name)
   }
 
   def traceJavaOptions(aspectjWeaver: Option[File], sigarLibs: Option[File]): Seq[String] = {
@@ -45,13 +45,13 @@ object AtmosRun {
   }
 
   def atmosDependencies(version: String, useProGuardedVersion: Boolean) = Seq(
-    if (useProGuardedVersion) "com.typesafe.atmos" % "atmos-dev" % version % AtmosDev.name
-    else "com.typesafe.atmos" % "atmos-query" % version % AtmosDev.name
+    if (useProGuardedVersion) "com.typesafe.atmos" % "atmos-dev" % version % EchoAtmos.name
+    else "com.typesafe.atmos" % "atmos-query" % version % EchoAtmos.name
   )
 
   def consoleDependencies(version: String, useProGuardedVersion: Boolean) = Seq(
-    if (useProGuardedVersion) "com.typesafe.console" % "console-solo" % version % AtmosConsole.name
-    else "com.typesafe.console" % "typesafe-console" % version % AtmosConsole.name
+    if (useProGuardedVersion) "com.typesafe.console" % "console-solo" % version % EchoConsole.name
+    else "com.typesafe.console" % "typesafe-console" % version % EchoConsole.name
   )
 
   def selectAkkaVersion(dependencies: Seq[ModuleID]): Option[String] = {
@@ -65,10 +65,10 @@ object AtmosRun {
     else    sys.error("Akka version is not supported by Typesafe Console: " + akkaVersion)
   }
 
-  def selectTraceDependencies(dependencies: Seq[ModuleID], traceAkkaVersion: Option[String], atmosVersion: String, scalaVersion: String): Seq[ModuleID] = {
+  def selectTraceDependencies(dependencies: Seq[ModuleID], traceAkkaVersion: Option[String], echoVersion: String, scalaVersion: String): Seq[ModuleID] = {
     if (containsTrace(dependencies)) Seq.empty[ModuleID]
     else traceAkkaVersion match {
-      case Some(akkaVersion) => traceAkkaDependencies(akkaVersion, atmosVersion, scalaVersion)
+      case Some(akkaVersion) => traceAkkaDependencies(akkaVersion, echoVersion, scalaVersion)
       case None              => Seq.empty[ModuleID]
     }
   }
@@ -82,9 +82,9 @@ object AtmosRun {
   } map (_.revision)
 
 
-  def traceAkkaDependencies(akkaVersion: String, atmosVersion: String, scalaVersion: String): Seq[ModuleID] = {
+  def traceAkkaDependencies(akkaVersion: String, echoVersion: String, scalaVersion: String): Seq[ModuleID] = {
     val crossVersion = akkaCrossVersion(akkaVersion, scalaVersion)
-    Seq("com.typesafe.atmos" % ("trace-akka-" + akkaVersion) % atmosVersion % AtmosTraceCompile.name cross crossVersion)
+    Seq("com.typesafe.atmos" % ("trace-akka-" + akkaVersion) % echoVersion % EchoTraceCompile.name cross crossVersion)
   }
 
   def akkaCrossVersion(akkaVersion: String, scalaVersion: String): CrossVersion = {
@@ -95,11 +95,11 @@ object AtmosRun {
   }
 
   def weaveDependencies(version: String) = Seq(
-    "org.aspectj" % "aspectjweaver" % version % AtmosWeave.name
+    "org.aspectj" % "aspectjweaver" % version % EchoWeave.name
   )
 
   def sigarDependencies(version: String) = Seq(
-    "com.typesafe.atmos" % "atmos-sigar-libs" % version % AtmosSigar.name
+    "com.typesafe.atmos" % "atmos-sigar-libs" % version % EchoSigar.name
   )
 
   def collectManagedClasspath(config: Configuration): Initialize[Task[Classpath]] =
@@ -122,7 +122,7 @@ object AtmosRun {
   def findSigar: Initialize[Task[Option[File]]] =
     update map { report => report.matching(moduleFilter(organization = "org.fusesource", name = "sigar")) headOption }
 
-  def defaultAtmosConfig(tracePort: Int): String = """
+  def defaultEchoConfig(tracePort: Int): String = """
     |akka {
     |  loglevel = INFO
     |  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
@@ -137,14 +137,14 @@ object AtmosRun {
     |}
   """.trim.stripMargin.format(tracePort)
 
-  def defaultConsoleConfig(name: String, atmosPort: Int): String = """
+  def defaultConsoleConfig(name: String, echoPort: Int): String = """
     |app.name = "%s"
     |atmos.host="localhost"
     |atmos.port=%s
     |atmos.start-url="/monitoring/"
     |query.cache-historical-expiration = 60 seconds
     |query.cache-metadata-expiration = 30 seconds
-  """.trim.stripMargin.format(name, atmosPort)
+  """.trim.stripMargin.format(name, echoPort)
 
   def seqToConfig(seq: Seq[(String, Any)], indent: Int, quote: Boolean): String = {
     seq map { case (k, v) =>
@@ -176,22 +176,22 @@ object AtmosRun {
     """.trim.stripMargin.format(StringUtilities.normalize(node), traceable, sampling, tracePort)
   }
 
-  def includeAtmosConfig(configs: Seq[String]): String = {
+  def includeEchoConfig(configs: Seq[String]): String = {
     val includes = configs map { name =>
       """
         |%s {
-        |  include "atmos"
+        |  include "echo"
         |}
       """.trim.stripMargin.format(name)
     } mkString ("\n")
 
     """
-      |include "atmos"
+      |include "echo"
       |%s
     """.trim.stripMargin.format(includes)
   }
 
-  def defaultLogbackConfig(name: String): Initialize[String] = atmosLogDirectory { dir =>
+  def defaultLogbackConfig(name: String): Initialize[String] = echoLogDirectory { dir =>
     """
       |<?xml version="1.0" encoding="UTF-8"?>
       |<configuration scan="false" debug="false">
@@ -215,7 +215,7 @@ object AtmosRun {
   }
 
   def writeConfig(name: String, configKey: TaskKey[String], logbackKey: SettingKey[String]): Initialize[Task[File]] =
-    (atmosConfigDirectory, configKey, logbackKey) map { (confDir, conf, logback) =>
+    (echoConfigDirectory, configKey, logbackKey) map { (confDir, conf, logback) =>
       writeConfigFiles(confDir, name, Seq(
         "application.conf" -> conf,
         "logback.xml" -> logback
@@ -223,10 +223,10 @@ object AtmosRun {
     }
 
   def writeTraceConfig(name: String, configKey: TaskKey[String], includesKey: TaskKey[String]): Initialize[Task[File]] =
-    (atmosConfigDirectory, configKey, includesKey) map { (confDir, conf, includes) =>
+    (echoConfigDirectory, configKey, includesKey) map { (confDir, conf, includes) =>
       val configResource = sys.props.getOrElse("config.resource", "application.conf")
       writeConfigFiles(confDir, name, Seq(
-        "atmos.conf" -> conf,
+        "echo.conf" -> conf,
         configResource -> includes
       ))
     }
@@ -239,7 +239,7 @@ object AtmosRun {
     dir
   }
 
-  def unpackSigar: Initialize[Task[Option[File]]] = (update, atmosDirectory) map { (report, dir) =>
+  def unpackSigar: Initialize[Task[Option[File]]] = (update, echoDirectory) map { (report, dir) =>
     report.matching(moduleFilter(name = "atmos-sigar-libs")).headOption map { jar =>
       val unzipped = dir / "sigar"
       IO.unzip(jar, unzipped)
@@ -251,19 +251,19 @@ object AtmosRun {
     log.info("Typesafe Console is available at " + uri)
   }
 
-  def atmosRunner: Initialize[Task[ScalaRun]] =
-    (baseDirectory, javaOptions, outputStrategy, fork, trapExit, connectInput, traceOptions, sigar, atmosInputs) map {
+  def echoRunner: Initialize[Task[ScalaRun]] =
+    (baseDirectory, javaOptions, outputStrategy, fork, trapExit, connectInput, traceOptions, sigar, echoInputs) map {
       (base, options, strategy, forkRun, trap, connectIn, traceOpts, sigar, inputs) =>
         if (forkRun) {
           val forkConfig = ForkOptions(inputs.javaHome, strategy, Seq.empty, Some(base), options ++ traceOpts, connectIn)
-          new AtmosForkRun(forkConfig, inputs)
+          new EchoForkRun(forkConfig, inputs)
         } else {
-          new AtmosDirectRun(trap, sigar, inputs)
+          new EchoDirectRun(trap, sigar, inputs)
         }
     }
 
-  class AtmosForkRun(forkConfig: ForkScalaRun, inputs: AtmosInputs) extends AtmosRunner(inputs) {
-    def atmosRun(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
+  class EchoForkRun(forkConfig: ForkScalaRun, inputs: EchoInputs) extends EchoRunner(inputs) {
+    def echoRun(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
       log.info("Running (forked) " + mainClass + " " + options.mkString(" "))
       log.debug("  Classpath:\n\t" + classpath.mkString("\n\t"))
       val forkRun = new Forked(mainClass, forkConfig, temporary = false)
@@ -291,8 +291,8 @@ object AtmosRun {
     }
   }
 
-  class AtmosDirectRun(trapExit: Boolean, sigar: Sigar, inputs: AtmosInputs) extends AtmosRunner(inputs) {
-    def atmosRun(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
+  class EchoDirectRun(trapExit: Boolean, sigar: Sigar, inputs: EchoInputs) extends EchoRunner(inputs) {
+    def echoRun(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
       log.info("Running " + mainClass + " " + options.mkString(" "))
       log.debug("  Classpath:\n\t" + classpath.mkString("\n\t"))
       System.setProperty("org.aspectj.tracing.factory", "default")
@@ -301,38 +301,38 @@ object AtmosRun {
     }
   }
 
-  abstract class AtmosRunner(inputs: AtmosInputs) extends ScalaRun {
-    def atmosRun(mainClass: String, classpath: Seq[File], arguments: Seq[String], log: Logger): Option[String]
+  abstract class EchoRunner(inputs: EchoInputs) extends ScalaRun {
+    def echoRun(mainClass: String, classpath: Seq[File], arguments: Seq[String], log: Logger): Option[String]
 
     def run(mainClass: String, classpath: Seq[File], arguments: Seq[String], log: Logger): Option[String] = {
       try {
-        AtmosController.start(inputs, log)
-        atmosRun(mainClass, classpath, arguments, log)
+        EchoController.start(inputs, log)
+        echoRun(mainClass, classpath, arguments, log)
       } finally {
-        AtmosController.stop(log)
+        EchoController.stop(log)
       }
     }
   }
 
-  def atmosLauncher: Initialize[Task[ScalaRun]] =
-    (baseDirectory, javaOptions, outputStrategy, traceOptions, atmosInputs, node, launchNode) map {
+  def echoLauncher: Initialize[Task[ScalaRun]] =
+    (baseDirectory, javaOptions, outputStrategy, traceOptions, echoInputs, node, launchNode) map {
       (base, options, strategy, traceOpts, inputs, defaultName, nodeNamer) =>
         val forkConfig = ForkOptions(inputs.javaHome, strategy, Seq.empty, Some(base), options ++ traceOpts, connectInput = false)
-        new AtmosLaunch(forkConfig, inputs, defaultName, nodeNamer)
+        new EchoLaunch(forkConfig, inputs, defaultName, nodeNamer)
     }
 
-  class AtmosLaunch(forkConfig: ForkOptions, inputs: AtmosInputs, defaultName: String, nodeNamer: NodeNamer) extends ScalaRun {
+  class EchoLaunch(forkConfig: ForkOptions, inputs: EchoInputs, defaultName: String, nodeNamer: NodeNamer) extends ScalaRun {
     def run(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
-      AtmosController.start(inputs, log)
+      EchoController.start(inputs, log)
       log.info("Launching " + mainClass + " " + options.mkString(" "))
       log.debug("  Classpath:\n\t" + classpath.mkString("\n\t"))
       val node = nodeNamer(defaultName, mainClass, options)
-      val nodeProperty = "-Datmos.trace.node=" + node
+      val nodeProperty = "-Decho.trace.node=" + node
       val nodeConfig = forkConfig.copy(runJVMOptions = (forkConfig.runJVMOptions :+ nodeProperty))
       val name = "%s (%s)" format (node, mainClass)
       val forked = new Forked(name, nodeConfig, temporary = false)
       forked.run(mainClass, classpath, options, log)
-      AtmosController.launched(forked)
+      EchoController.launched(forked)
       None
     }
   }

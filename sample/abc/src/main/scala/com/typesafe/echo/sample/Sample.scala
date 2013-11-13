@@ -1,4 +1,4 @@
-package com.typesafe.atmos.sample
+package com.typesafe.echo.sample
 
 import akka.actor._
 import akka.event.LoggingReceive
