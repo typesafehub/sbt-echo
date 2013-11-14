@@ -23,17 +23,17 @@ object EchoPlayRun {
 
   def tracePlayDependencies(dependencies: Seq[ModuleID], playVersion: String, echoVersion: String): Seq[ModuleID] = {
     if (containsTracePlay(dependencies)) Seq.empty[ModuleID]
-    else Seq("com.typesafe.atmos" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled)
+    else Seq("com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled)
   }
 
   def supportedPlayVersion(playVersion: String): String = {
     if      (playVersion startsWith "2.1.") Play21Version
     else if (playVersion startsWith "2.2.") Play22Version
-    else    sys.error("Play version is not supported by Typesafe Console: " + playVersion)
+    else    sys.error("Play version is not supported by Activator tracing: " + playVersion)
   }
 
   def containsTracePlay(dependencies: Seq[ModuleID]): Boolean = dependencies exists { module =>
-    module.organization == "com.typesafe.atmos" && module.name.startsWith("trace-play")
+    module.organization == "com.typesafe.trace" && module.name.startsWith("trace-play")
   }
 
   def createWeavingClassLoader(sigar: Sigar): ClassLoaderCreator = (name, urls, parent) => new WeavingURLClassLoader(urls, parent) {
@@ -45,17 +45,14 @@ object EchoPlayRun {
     override def toString = "Weaving" + name + "{" + getURLs.map(_.toString).mkString(", ") + "}"
   }
 
-  def createRunHook = (echoInputs in Echo, sigarLibs in Echo, state) map { (inputs, sigar, s) =>
-    new RunHook(inputs, sigar, s.log)
-  }
+  def createRunHook = (sigarLibs in Echo) map { (sigar) => new RunHook(sigar) }
 
-  class RunHook(inputs: EchoInputs, sigarLibs: Option[File], log: Logger) extends play.PlayRunHook {
+  class RunHook(sigarLibs: Option[File]) extends play.PlayRunHook {
     override def beforeStarted(): Unit = {
       System.setProperty("org.aspectj.tracing.factory", "default")
       sys.props.getOrElseUpdate("config.resource", "application.conf")
       sigarLibs foreach { s => System.setProperty("org.hyperic.sigar.path", s.getAbsolutePath) }
-      EchoController.start(inputs, log)
     }
-    override def afterStopped(): Unit = EchoController.stop(log)
+    override def afterStopped(): Unit = {}
   }
 }

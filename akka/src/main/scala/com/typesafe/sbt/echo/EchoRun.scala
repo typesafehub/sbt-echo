@@ -22,14 +22,8 @@ object EchoRun {
   val EchoTraceCompile = config("echo-trace-compile").extend(Configurations.RuntimeInternal).hide
   val EchoTraceTest    = config("echo-trace-test").extend(EchoTraceCompile, Configurations.TestInternal).hide
 
-  val EchoAtmos   = config("echo-atmos").hide
-  val EchoConsole = config("echo-console").hide
-  val EchoWeave   = config("echo-weave").hide
-  val EchoSigar   = config("echo-sigar").hide
-
-  case class EchoOptions(port: Int, options: Seq[String], classpath: Classpath)
-
-  case class EchoInputs(traceOnly: Boolean, tracePort: Int, javaHome: Option[File], atmos: EchoOptions, console: EchoOptions, runListeners: Seq[URI => Unit])
+  val EchoWeave = config("echo-weave").hide
+  val EchoSigar = config("echo-sigar").hide
 
   case class Sigar(dependency: Option[File], nativeLibraries: Option[File])
 
@@ -44,16 +38,6 @@ object EchoRun {
     javaAgent ++ aspectjOptions ++ sigarPath
   }
 
-  def atmosDependencies(version: String, useProGuardedVersion: Boolean) = Seq(
-    if (useProGuardedVersion) "com.typesafe.atmos" % "atmos-dev" % version % EchoAtmos.name
-    else "com.typesafe.atmos" % "atmos-query" % version % EchoAtmos.name
-  )
-
-  def consoleDependencies(version: String, useProGuardedVersion: Boolean) = Seq(
-    if (useProGuardedVersion) "com.typesafe.console" % "console-solo" % version % EchoConsole.name
-    else "com.typesafe.console" % "typesafe-console" % version % EchoConsole.name
-  )
-
   def selectAkkaVersion(dependencies: Seq[ModuleID]): Option[String] = {
     findAkkaVersion(dependencies) map supportedAkkaVersion
   }
@@ -62,7 +46,7 @@ object EchoRun {
     if      (akkaVersion startsWith "2.0.") Akka20Version
     else if (akkaVersion startsWith "2.1.") Akka21Version
     else if (akkaVersion startsWith "2.2.") Akka22Version
-    else    sys.error("Akka version is not supported by Typesafe Console: " + akkaVersion)
+    else    sys.error("Akka version is not supported by Activator tracing: " + akkaVersion)
   }
 
   def selectTraceDependencies(dependencies: Seq[ModuleID], traceAkkaVersion: Option[String], echoVersion: String, scalaVersion: String): Seq[ModuleID] = {
@@ -74,7 +58,7 @@ object EchoRun {
   }
 
   def containsTrace(dependencies: Seq[ModuleID]): Boolean = dependencies exists { module =>
-    module.organization == "com.typesafe.atmos" && module.name.startsWith("trace-akka")
+    module.organization == "com.typesafe.trace" && module.name.startsWith("trace-akka")
   }
 
   def findAkkaVersion(dependencies: Seq[ModuleID]): Option[String] = dependencies find { module =>
@@ -84,7 +68,7 @@ object EchoRun {
 
   def traceAkkaDependencies(akkaVersion: String, echoVersion: String, scalaVersion: String): Seq[ModuleID] = {
     val crossVersion = akkaCrossVersion(akkaVersion, scalaVersion)
-    Seq("com.typesafe.atmos" % ("trace-akka-" + akkaVersion) % echoVersion % EchoTraceCompile.name cross crossVersion)
+    Seq("com.typesafe.trace" % ("trace-akka-" + akkaVersion) % echoVersion % EchoTraceCompile.name cross crossVersion)
   }
 
   def akkaCrossVersion(akkaVersion: String, scalaVersion: String): CrossVersion = {
@@ -99,18 +83,15 @@ object EchoRun {
   )
 
   def sigarDependencies(version: String) = Seq(
-    "com.typesafe.atmos" % "atmos-sigar-libs" % version % EchoSigar.name
+    "com.typesafe.trace" % "trace-sigar-libs" % version % EchoSigar.name
   )
-
-  def collectManagedClasspath(config: Configuration): Initialize[Task[Classpath]] =
-    (classpathTypes, update) map { (types, report) => Classpaths.managedJars(config, types, report) }
 
   def collectTracedClasspath(config: Configuration): Initialize[Task[Classpath]] =
     (classpathTypes, update, streams) map { (types, report, s) =>
       val classpath = Classpaths.managedJars(config, types, report)
       val tracedAkka = classpath count (_.metadata.get(Keys.moduleID.key).map(_.name).getOrElse("").startsWith("trace-akka-"))
-      if (tracedAkka < 1) s.log.warn("No trace dependencies for Typesafe Console.")
-      if (tracedAkka > 1) s.log.warn("Multiple trace dependencies for Typesafe Console.")
+      if (tracedAkka < 1) s.log.warn("No trace dependencies for Activator.")
+      if (tracedAkka > 1) s.log.warn("Multiple trace dependencies for Activator.")
       classpath
     }
 
@@ -121,30 +102,6 @@ object EchoRun {
 
   def findSigar: Initialize[Task[Option[File]]] =
     update map { report => report.matching(moduleFilter(organization = "org.fusesource", name = "sigar")) headOption }
-
-  def defaultEchoConfig(tracePort: Int): String = """
-    |akka {
-    |  loglevel = INFO
-    |  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
-    |}
-    |
-    |atmos {
-    |  mode = local
-    |  trace {
-    |    event-handlers = ["com.typesafe.atmos.trace.store.MemoryTraceEventListener", "com.typesafe.atmos.analytics.analyze.LocalAnalyzerTraceEventListener"]
-    |    receive.port = %s
-    |  }
-    |}
-  """.trim.stripMargin.format(tracePort)
-
-  def defaultConsoleConfig(name: String, echoPort: Int): String = """
-    |app.name = "%s"
-    |atmos.host="localhost"
-    |atmos.port=%s
-    |atmos.start-url="/monitoring/"
-    |query.cache-historical-expiration = 60 seconds
-    |query.cache-metadata-expiration = 30 seconds
-  """.trim.stripMargin.format(name, echoPort)
 
   def seqToConfig(seq: Seq[(String, Any)], indent: Int, quote: Boolean): String = {
     seq map { case (k, v) =>
@@ -157,7 +114,7 @@ object EchoRun {
 
   def defaultTraceConfig(node: String, traceable: String, sampling: String, tracePort: Int): String = {
     """
-      |atmos {
+      |activator {
       |  trace {
       |    enabled = true
       |    node = "%s"
@@ -191,37 +148,6 @@ object EchoRun {
     """.trim.stripMargin.format(includes)
   }
 
-  def defaultLogbackConfig(name: String): Initialize[String] = echoLogDirectory { dir =>
-    """
-      |<?xml version="1.0" encoding="UTF-8"?>
-      |<configuration scan="false" debug="false">
-      |  <property scope="local" name="logDir" value="%s"/>
-      |  <property scope="local" name="logName" value="%s"/>
-    """.trim.stripMargin.format(dir.getAbsolutePath, name) + """
-      |  <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
-      |    <File>${logDir}/${logName}.log</File>
-      |    <encoder>
-      |      <pattern>%date{ISO8601} %-5level [%logger{36}] [%X{akkaSource}] [%X{sourceThread}] : %m%n</pattern>
-      |    </encoder>
-      |    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-      |      <fileNamePattern>${logDir}/${logName}.log.%d{yyyy-MM-dd-HH}</fileNamePattern>
-      |    </rollingPolicy>
-      |  </appender>
-      |  <root level="INFO">
-      |    <appender-ref ref="file"/>
-      |  </root>
-      |</configuration>
-    """.stripMargin
-  }
-
-  def writeConfig(name: String, configKey: TaskKey[String], logbackKey: SettingKey[String]): Initialize[Task[File]] =
-    (echoConfigDirectory, configKey, logbackKey) map { (confDir, conf, logback) =>
-      writeConfigFiles(confDir, name, Seq(
-        "application.conf" -> conf,
-        "logback.xml" -> logback
-      ))
-    }
-
   def writeTraceConfig(name: String, configKey: TaskKey[String], includesKey: TaskKey[String]): Initialize[Task[File]] =
     (echoConfigDirectory, configKey, includesKey) map { (confDir, conf, includes) =>
       val configResource = sys.props.getOrElse("config.resource", "application.conf")
@@ -240,30 +166,26 @@ object EchoRun {
   }
 
   def unpackSigar: Initialize[Task[Option[File]]] = (update, echoDirectory) map { (report, dir) =>
-    report.matching(moduleFilter(name = "atmos-sigar-libs")).headOption map { jar =>
+    report.matching(moduleFilter(name = "trace-sigar-libs")).headOption map { jar =>
       val unzipped = dir / "sigar"
       IO.unzip(jar, unzipped)
       unzipped
     }
   }
 
-  def logConsoleUri(log: Logger)(uri: URI) = {
-    log.info("Typesafe Console is available at " + uri)
-  }
-
   def echoRunner: Initialize[Task[ScalaRun]] =
-    (baseDirectory, javaOptions, outputStrategy, fork, trapExit, connectInput, traceOptions, sigar, echoInputs) map {
-      (base, options, strategy, forkRun, trap, connectIn, traceOpts, sigar, inputs) =>
+    (baseDirectory, javaOptions, outputStrategy, fork, javaHome, trapExit, connectInput, traceOptions, sigar) map {
+      (base, options, strategy, forkRun, javaHomeDir, trap, connectIn, traceOpts, sigar) =>
         if (forkRun) {
-          val forkConfig = ForkOptions(inputs.javaHome, strategy, Seq.empty, Some(base), options ++ traceOpts, connectIn)
-          new EchoForkRun(forkConfig, inputs)
+          val forkConfig = ForkOptions(javaHomeDir, strategy, Seq.empty, Some(base), options ++ traceOpts, connectIn)
+          new EchoForkRun(forkConfig)
         } else {
-          new EchoDirectRun(trap, sigar, inputs)
+          new EchoDirectRun(trap, sigar)
         }
     }
 
-  class EchoForkRun(forkConfig: ForkScalaRun, inputs: EchoInputs) extends EchoRunner(inputs) {
-    def echoRun(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
+  class EchoForkRun(forkConfig: ForkScalaRun) extends ScalaRun {
+    def run(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
       log.info("Running (forked) " + mainClass + " " + options.mkString(" "))
       log.debug("  Classpath:\n\t" + classpath.mkString("\n\t"))
       val forkRun = new Forked(mainClass, forkConfig, temporary = false)
@@ -291,49 +213,13 @@ object EchoRun {
     }
   }
 
-  class EchoDirectRun(trapExit: Boolean, sigar: Sigar, inputs: EchoInputs) extends EchoRunner(inputs) {
-    def echoRun(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
+  class EchoDirectRun(trapExit: Boolean, sigar: Sigar) extends ScalaRun {
+    def run(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
       log.info("Running " + mainClass + " " + options.mkString(" "))
       log.debug("  Classpath:\n\t" + classpath.mkString("\n\t"))
       System.setProperty("org.aspectj.tracing.factory", "default")
       val loader = new WeavingURLClassLoader(Path.toURLs(classpath), SigarClassLoader(sigar))
       (new RunMain(loader, mainClass, options)).run(trapExit, log)
-    }
-  }
-
-  abstract class EchoRunner(inputs: EchoInputs) extends ScalaRun {
-    def echoRun(mainClass: String, classpath: Seq[File], arguments: Seq[String], log: Logger): Option[String]
-
-    def run(mainClass: String, classpath: Seq[File], arguments: Seq[String], log: Logger): Option[String] = {
-      try {
-        EchoController.start(inputs, log)
-        echoRun(mainClass, classpath, arguments, log)
-      } finally {
-        EchoController.stop(log)
-      }
-    }
-  }
-
-  def echoLauncher: Initialize[Task[ScalaRun]] =
-    (baseDirectory, javaOptions, outputStrategy, traceOptions, echoInputs, node, launchNode) map {
-      (base, options, strategy, traceOpts, inputs, defaultName, nodeNamer) =>
-        val forkConfig = ForkOptions(inputs.javaHome, strategy, Seq.empty, Some(base), options ++ traceOpts, connectInput = false)
-        new EchoLaunch(forkConfig, inputs, defaultName, nodeNamer)
-    }
-
-  class EchoLaunch(forkConfig: ForkOptions, inputs: EchoInputs, defaultName: String, nodeNamer: NodeNamer) extends ScalaRun {
-    def run(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
-      EchoController.start(inputs, log)
-      log.info("Launching " + mainClass + " " + options.mkString(" "))
-      log.debug("  Classpath:\n\t" + classpath.mkString("\n\t"))
-      val node = nodeNamer(defaultName, mainClass, options)
-      val nodeProperty = "-Decho.trace.node=" + node
-      val nodeConfig = forkConfig.copy(runJVMOptions = (forkConfig.runJVMOptions :+ nodeProperty))
-      val name = "%s (%s)" format (node, mainClass)
-      val forked = new Forked(name, nodeConfig, temporary = false)
-      forked.run(mainClass, classpath, options, log)
-      EchoController.launched(forked)
-      None
     }
   }
 }

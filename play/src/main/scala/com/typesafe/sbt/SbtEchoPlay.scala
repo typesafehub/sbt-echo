@@ -17,6 +17,6 @@ object SbtEchoPlay extends Plugin {
 
   def tracePlaySettings(): Seq[Setting[_]] = Seq(
     tracePlayVersion <<= playVersion map supportedPlayVersion,
-    traceDependencies <<= (libraryDependencies, tracePlayVersion, atmosVersion) map tracePlayDependencies
+    traceDependencies <<= (libraryDependencies, tracePlayVersion, echoVersion) map tracePlayDependencies
   )
 }
