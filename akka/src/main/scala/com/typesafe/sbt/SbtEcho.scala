@@ -18,34 +18,34 @@ object SbtEcho extends Plugin {
 
   object EchoKeys {
     val echoVersion = SettingKey[String]("echo-version")
-    val aspectjVersion = SettingKey[String]("aspectj-version")
+    val aspectjVersion = SettingKey[String]("echo-aspectj-version")
 
     val echoDirectory = SettingKey[File]("echo-directory")
     val echoConfigDirectory = SettingKey[File]("echo-config-directory")
 
-    val tracePort = TaskKey[Int]("trace-port")
+    val tracePort = TaskKey[Int]("echo-trace-port")
 
-    val node = SettingKey[String]("node")
-    val traceable = SettingKey[Seq[(String, Boolean)]]("traceable")
-    val traceableConfigString = SettingKey[String]("traceable-config-string")
-    val sampling = SettingKey[Seq[(String, Int)]]("sampling")
-    val samplingConfigString = SettingKey[String]("sampling-config-string")
-    val traceConfigString = TaskKey[String]("trace-config-string")
-    val includeConfig = TaskKey[Seq[String]]("include-config")
-    val traceConfigIncludes = TaskKey[String]("trace-config-includes")
-    val traceConfig = TaskKey[File]("trace-config")
-    val traceConfigClasspath = TaskKey[Classpath]("trace-config-classpath")
-    val aspectjWeaver = TaskKey[Option[File]]("aspectj-weaver")
-    val sigarDependency = TaskKey[Option[File]]("sigar-dependency")
-    val sigarLibs = TaskKey[Option[File]]("sigar-libs")
-    val sigar = TaskKey[Sigar]("sigar")
-    val traceOptions = TaskKey[Seq[String]]("trace-options")
-    val traceAkkaVersion = TaskKey[Option[String]]("trace-akka-version")
-    val traceDependencies = TaskKey[Seq[ModuleID]]("trace-dependencies")
+    val node = SettingKey[String]("echo-node")
+    val traceable = SettingKey[Seq[(String, Boolean)]]("echo-traceable")
+    val traceableConfigString = SettingKey[String]("echo-traceable-config-string")
+    val sampling = SettingKey[Seq[(String, Int)]]("echo-sampling")
+    val samplingConfigString = SettingKey[String]("echo-sampling-config-string")
+    val traceConfigString = TaskKey[String]("echo-trace-config-string")
+    val includeConfig = TaskKey[Seq[String]]("echo-include-config")
+    val traceConfigIncludes = TaskKey[String]("echo-trace-config-includes")
+    val traceConfig = TaskKey[File]("echo-trace-config")
+    val traceConfigClasspath = TaskKey[Classpath]("echo-trace-config-classpath")
+    val aspectjWeaver = TaskKey[Option[File]]("echo-aspectj-weaver")
+    val sigarDependency = TaskKey[Option[File]]("echo-sigar-dependency")
+    val sigarLibs = TaskKey[Option[File]]("echo-sigar-libs")
+    val sigar = TaskKey[Sigar]("echo-sigar")
+    val traceOptions = TaskKey[Seq[String]]("echo-trace-options")
+    val traceAkkaVersion = TaskKey[Option[String]]("echo-trace-akka-version")
+    val traceDependencies = TaskKey[Seq[ModuleID]]("echo-trace-dependencies")
 
     // play keys
-    val tracePlayVersion = TaskKey[String]("trace-play-version")
-    val weavingClassLoader = TaskKey[(String, Array[URL], ClassLoader) => ClassLoader]("weaving-class-loader")
+    val tracePlayVersion = TaskKey[String]("echo-trace-play-version")
+    val weavingClassLoader = TaskKey[(String, Array[URL], ClassLoader) => ClassLoader]("echo-weaving-class-loader")
   }
 
   import EchoKeys._
