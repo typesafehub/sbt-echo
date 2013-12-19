@@ -39,14 +39,14 @@ object EchoRun {
   }
 
   def selectAkkaVersion(dependencies: Seq[ModuleID]): Option[String] = {
-    findAkkaVersion(dependencies) map supportedAkkaVersion
+    findAkkaVersion(dependencies) flatMap supportedAkkaVersion
   }
 
-  def supportedAkkaVersion(akkaVersion: String): String = {
-    if      (akkaVersion startsWith "2.0.") Akka20Version
-    else if (akkaVersion startsWith "2.1.") Akka21Version
-    else if (akkaVersion startsWith "2.2.") Akka22Version
-    else    sys.error("Akka version is not supported by Activator tracing: " + akkaVersion)
+  def supportedAkkaVersion(akkaVersion: String): Option[String] = {
+    if      (akkaVersion startsWith "2.0.") Some(Akka20Version)
+    else if (akkaVersion startsWith "2.1.") Some(Akka21Version)
+    else if (akkaVersion startsWith "2.2.") Some(Akka22Version)
+    else    None
   }
 
   def selectTraceDependencies(dependencies: Seq[ModuleID], traceAkkaVersion: Option[String], echoVersion: String, scalaVersion: String): Seq[ModuleID] = {

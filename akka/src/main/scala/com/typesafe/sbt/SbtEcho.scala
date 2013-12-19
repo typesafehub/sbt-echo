@@ -44,7 +44,7 @@ object SbtEcho extends Plugin {
     val traceDependencies = TaskKey[Seq[ModuleID]]("echo-trace-dependencies")
 
     // play keys
-    val tracePlayVersion = TaskKey[String]("echo-trace-play-version")
+    val tracePlayVersion = TaskKey[Option[String]]("echo-trace-play-version")
     val weavingClassLoader = TaskKey[(String, Array[URL], ClassLoader) => ClassLoader]("echo-weaving-class-loader")
   }
 
@@ -118,6 +118,6 @@ object SbtEcho extends Plugin {
   )
 
   def traceAkka(akkaVersion: String) = {
-    traceAkkaVersion in Echo := Option(akkaVersion) map supportedAkkaVersion
+    traceAkkaVersion in Echo := supportedAkkaVersion(akkaVersion)
   }
 }

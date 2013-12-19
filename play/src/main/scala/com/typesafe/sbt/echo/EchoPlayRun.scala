@@ -21,15 +21,22 @@ object EchoPlayRun {
     weavingClassLoader in Echo <<= (sigar in Echo) map createWeavingClassLoader
   ) ++ EchoPlaySpecific.echoPlaySpecificSettings
 
-  def tracePlayDependencies(dependencies: Seq[ModuleID], playVersion: String, echoVersion: String): Seq[ModuleID] = {
+  def tracePlayDependencies(dependencies: Seq[ModuleID], tracePlayVersion: Option[String], echoVersion: String): Seq[ModuleID] = {
     if (containsTracePlay(dependencies)) Seq.empty[ModuleID]
-    else Seq("com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled)
+    else tracePlayVersion match {
+      case Some(playVersion) => Seq(tracePlayDependency(playVersion, echoVersion))
+      case None              => Seq.empty[ModuleID]
+    }
   }
 
-  def supportedPlayVersion(playVersion: String): String = {
-    if      (playVersion startsWith "2.1.") Play21Version
-    else if (playVersion startsWith "2.2.") Play22Version
-    else    sys.error("Play version is not supported by Activator tracing: " + playVersion)
+  def tracePlayDependency(playVersion: String, echoVersion: String): ModuleID = {
+    "com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled
+  }
+
+  def supportedPlayVersion(playVersion: String): Option[String] = {
+    if      (playVersion startsWith "2.1.") Some(Play21Version)
+    else if (playVersion startsWith "2.2.") Some(Play22Version)
+    else    None
   }
 
   def containsTracePlay(dependencies: Seq[ModuleID]): Boolean = dependencies exists { module =>
