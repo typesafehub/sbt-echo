@@ -3,7 +3,7 @@ import sbt.Keys._
 import net.virtualvoid.sbt.cross.CrossPlugin
 
 object SbtEchoBuild extends Build {
-  val Version = "0.1.0-SNAPSHOT"
+  val Version = "0.1.1-SNAPSHOT"
 
   lazy val sbtEcho = Project(
     id = "sbt-echo",
@@ -58,8 +58,8 @@ object SbtEchoBuild extends Build {
       resolvers += "Typesafe Maven Releases" at "http://repo.typesafe.com/typesafe/releases/",
       libraryDependencies <+= (sbtVersion in sbtPlugin, scalaBinaryVersion in update) { (sbtV, scalaV) =>
         val dependency = sbtV match {
-          case "0.12" => "play" % "sbt-plugin" % "2.1.4"
-          case "0.13" => "com.typesafe.play" % "sbt-plugin" % "2.2.0"
+          case "0.12" => "play" % "sbt-plugin" % "2.1.5"
+          case "0.13" => "com.typesafe.play" % "sbt-plugin" % "2.2.2"
           case _ => sys.error("Unsupported sbt version: " + sbtV)
         }
         Defaults.sbtPluginExtra(dependency, sbtV, scalaV)
