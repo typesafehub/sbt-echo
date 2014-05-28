@@ -37,6 +37,12 @@ object SbtEchoBuild extends Build {
     publishMavenStyle := false,
     publishTo <<= isSnapshot { snapshot =>
       if (snapshot) Some(Classpaths.sbtPluginSnapshots) else Some(Classpaths.sbtPluginReleases)
+    },
+    sbt.CrossBuilding.latestCompatibleVersionMapper ~= {
+      original => {
+        case "0.13" => "0.13.5"
+        case x => original(x)
+      }
     }
   )
 

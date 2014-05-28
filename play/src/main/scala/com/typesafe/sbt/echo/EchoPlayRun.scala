@@ -30,9 +30,9 @@ object EchoPlayRun {
     }
   }
 
-  def tracePlayDependency(playVersion: String, echoVersion: String): ModuleID = {
-    "com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled
-  }
+  def tracePlayDependency(playVersion: String, echoVersion: String): ModuleID =
+    if (playVersion startsWith "2.3.") "com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.binary
+    else "com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled
 
   def supportedPlayVersion(playVersion: String): Option[String] = {
     if      (playVersion startsWith "2.1.") Some(Play21Version)
