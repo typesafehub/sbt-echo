@@ -15,8 +15,8 @@ object EchoPlayRun {
   import SbtEcho.EchoKeys._
 
   val Play21Version = "2.1.5"
-  val Play22Version = "2.2.2"
-  val Play23Version = "2.3.0-RC2"
+  val Play22Version = "2.2.3"
+  val Play23Version = "2.3.0"
 
   def echoPlayRunSettings(): Seq[Setting[_]] = Seq(
     weavingClassLoader in Echo <<= (sigar in Echo) map createWeavingClassLoader

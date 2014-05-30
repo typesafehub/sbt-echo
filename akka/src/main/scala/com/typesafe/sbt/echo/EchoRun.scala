@@ -18,7 +18,7 @@ object EchoRun {
   val Akka20Version = "2.0.5"
   val Akka21Version = "2.1.4"
   val Akka22Version = "2.2.4"
-  val Akka23Version = "2.3.2"
+  val Akka23Version = "2.3.3"
 
   val EchoTraceCompile = config("echo-trace-compile").extend(Configurations.RuntimeInternal).hide
   val EchoTraceTest    = config("echo-trace-test").extend(EchoTraceCompile, Configurations.TestInternal).hide
