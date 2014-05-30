@@ -1,1 +1,1 @@
-addSbtPlugin("com.typesafe.sbt" % "sbt-echo" % "0.1.1-SNAPSHOT")
+addSbtPlugin("com.typesafe.sbt" % "sbt-echo" % "0.1.4-SNAPSHOT")
