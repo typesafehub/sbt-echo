@@ -10,7 +10,7 @@ import java.net.URI
 object SbtEcho extends Plugin {
   import echo.EchoRun._
 
-  val EchoVersion = "0.1.3"
+  val EchoVersion = "0.1.4"
   val AspectjVersion = "1.7.3"
 
   val Echo = config("echo").extend(Compile)
