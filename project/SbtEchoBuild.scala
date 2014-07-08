@@ -3,7 +3,7 @@ import sbt.Keys._
 import net.virtualvoid.sbt.cross.CrossPlugin
 
 object SbtEchoBuild extends Build {
-  val Version = "0.1.1.2"
+  val Version = "0.1.1.3-SNAPSHOT"
 
   lazy val sbtEcho = Project(
     id = "sbt-echo",
