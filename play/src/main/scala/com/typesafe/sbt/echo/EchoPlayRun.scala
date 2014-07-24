@@ -6,7 +6,7 @@ package echo
 
 import sbt._
 import sbt.Keys._
-import play.Project.ClassLoaderCreator
+import play.Play.ClassLoaderCreator
 import org.aspectj.weaver.loadtime.WeavingURLClassLoader
 
 object EchoPlayRun {
@@ -15,7 +15,8 @@ object EchoPlayRun {
   import SbtEcho.EchoKeys._
 
   val Play21Version = "2.1.5"
-  val Play22Version = "2.2.2"
+  val Play22Version = "2.2.3"
+  val Play23Version = "2.3.0"
 
   def echoPlayRunSettings(): Seq[Setting[_]] = Seq(
     weavingClassLoader in Echo <<= (sigar in Echo) map createWeavingClassLoader
@@ -29,13 +30,14 @@ object EchoPlayRun {
     }
   }
 
-  def tracePlayDependency(playVersion: String, echoVersion: String): ModuleID = {
-    "com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled
-  }
+  def tracePlayDependency(playVersion: String, echoVersion: String): ModuleID =
+    if (playVersion startsWith "2.3.") "com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.binary
+    else "com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled
 
   def supportedPlayVersion(playVersion: String): Option[String] = {
     if      (playVersion startsWith "2.1.") Some(Play21Version)
     else if (playVersion startsWith "2.2.") Some(Play22Version)
+    else if (playVersion startsWith "2.3.") Some(Play23Version)
     else    None
   }
 

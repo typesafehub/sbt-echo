@@ -6,8 +6,9 @@ package echo
 
 import sbt._
 import sbt.Keys._
-import play.Keys.playRunHooks
-import play.Project.{ playRunTask, playReloaderClasspath, playReloaderClassLoader }
+import play.PlayImport._
+import PlayKeys.playRunHooks
+import play.Play.{ playRunTask, playReloaderClasspath, playReloaderClassLoader, playAssetsClassLoader }
 
 object EchoPlaySpecific {
   import SbtEcho.Echo
@@ -16,6 +17,11 @@ object EchoPlaySpecific {
   def echoPlaySpecificSettings(): Seq[Setting[_]] = Seq(
     playRunHooks in Echo <<= playRunHooks,
     playRunHooks in Echo <+= EchoPlayRun.createRunHook,
-    run in Echo <<= playRunTask(playRunHooks in Echo, externalDependencyClasspath in Echo, weavingClassLoader in Echo, playReloaderClasspath, playReloaderClassLoader)
+    run in Echo <<= playRunTask(playRunHooks in Echo,
+                                externalDependencyClasspath in Echo,
+                                weavingClassLoader in Echo,
+                                playReloaderClasspath,
+                                playReloaderClassLoader,
+                                playAssetsClassLoader)
   )
 }
