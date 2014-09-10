@@ -52,10 +52,11 @@ object SbtEcho extends Plugin {
 
   lazy val echoSettings: Seq[Setting[_]] = echoCompileSettings
 
-  def echoCompileSettings: Seq[Setting[_]] =
+  def echoCompileSettings: Seq[Setting[_]] = {
     inConfig(Echo)(echoDefaultSettings(Runtime, EchoTraceCompile)) ++
-    inConfig(Echo)(echoRunSettings(Compile)) ++
-    echoUnscopedSettings
+      inConfig(Echo)(echoRunSettings(Compile)) ++
+      echoUnscopedSettings
+  }
 
   def echoTestSettings: Seq[Setting[_]] =
     inConfig(EchoTest)(echoDefaultSettings(Test, EchoTraceTest)) ++
@@ -103,7 +104,9 @@ object SbtEcho extends Plugin {
     mainClass in run <<= mainClass in run in extendConfig,
     inTask(run)(Seq(runner <<= echoRunner)).head,
     run <<= Defaults.runTask(fullClasspath, mainClass in run, runner in run),
-    runMain <<= Defaults.runMainTask(fullClasspath, runner in run)
+    runMain <<= Defaults.runMainTask(fullClasspath, runner in run),
+    UIKeys.backgroundRunMain <<= SbtBackgroundRunPlugin.backgroundRunMainTask(fullClasspath, runner in run),
+    UIKeys.backgroundRun <<= SbtBackgroundRunPlugin.backgroundRunTask(fullClasspath, mainClass in run, runner in run)
   )
 
   def echoUnscopedSettings: Seq[Setting[_]] = Seq(

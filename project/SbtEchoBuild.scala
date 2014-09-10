@@ -17,7 +17,7 @@ object SbtEchoBuild extends Build {
     base = file("akka"),
     settings = defaultSettings ++ Seq(
       name := "sbt-echo",
-      libraryDependencies += Dependency.aspectjTools
+      libraryDependencies ++= Seq(Dependency.aspectjTools, Dependency.sbtBackgroundRun)
     )
   )
 
@@ -57,6 +57,7 @@ object SbtEchoBuild extends Build {
 
   object Dependency {
     val aspectjTools = "org.aspectj" % "aspectjtools" % "1.7.3"
+    val sbtBackgroundRun = Defaults.sbtPluginExtra("com.typesafe.sbtrc" % "ui-interface-0-13" % "1.0-d5ba9ed9c1d31e3431aeca5e429d290b56cb0b14", "0.13", "2.10")
 
     def playPlugin: Seq[Setting[_]] = Seq(
       resolvers += Classpaths.typesafeSnapshots,
