@@ -1,9 +1,11 @@
+import com.typesafe.sbt.SbtGit
 import sbt._
 import sbt.Keys._
 import net.virtualvoid.sbt.cross.CrossPlugin
+import com.typesafe.sbt.SbtGit
 
 object SbtEchoBuild extends Build {
-  val Version = "0.1.6-SNAPSHOT"
+  def baseVersions: Seq[Setting[_]] = SbtGit.versionWithGit
 
   lazy val sbtEcho = Project(
     id = "sbt-echo",
@@ -17,7 +19,7 @@ object SbtEchoBuild extends Build {
     base = file("akka"),
     settings = defaultSettings ++ Seq(
       name := "sbt-echo",
-      libraryDependencies += Dependency.aspectjTools
+      libraryDependencies ++= Seq(Dependency.aspectjTools, Dependency.sbtBackgroundRun)
     )
   )
 
@@ -30,17 +32,17 @@ object SbtEchoBuild extends Build {
     ) ++ Dependency.playPlugin
   )
 
-  lazy val defaultSettings: Seq[Setting[_]] = Defaults.defaultSettings ++ crossBuildSettings ++ Seq(
+  lazy val defaultSettings: Seq[Setting[_]] = Defaults.defaultSettings ++ crossBuildSettings ++ baseVersions ++ Seq(
     sbtPlugin := true,
     organization := "com.typesafe.sbt",
-    version := Version,
+    version <<= version in ThisBuild,
     publishMavenStyle := false,
     publishTo <<= isSnapshot { snapshot =>
       if (snapshot) Some(Classpaths.sbtPluginSnapshots) else Some(Classpaths.sbtPluginReleases)
     },
     sbt.CrossBuilding.latestCompatibleVersionMapper ~= {
       original => {
-        case "0.13" => "0.13.5"
+        case "0.13" => "0.13.6"
         case x => original(x)
       }
     }
@@ -57,6 +59,7 @@ object SbtEchoBuild extends Build {
 
   object Dependency {
     val aspectjTools = "org.aspectj" % "aspectjtools" % "1.7.3"
+    val sbtBackgroundRun = Defaults.sbtPluginExtra("com.typesafe.sbtrc" % "ui-interface-0-13" % "1.0-d5ba9ed9c1d31e3431aeca5e429d290b56cb0b14", "0.13", "2.10")
 
     def playPlugin: Seq[Setting[_]] = Seq(
       resolvers += Classpaths.typesafeSnapshots,
