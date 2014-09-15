@@ -1,9 +1,11 @@
+import com.typesafe.sbt.SbtGit
 import sbt._
 import sbt.Keys._
 import net.virtualvoid.sbt.cross.CrossPlugin
+import com.typesafe.sbt.SbtGit
 
 object SbtEchoBuild extends Build {
-  val Version = "0.1.6-SNAPSHOT"
+  def baseVersions: Seq[Setting[_]] = SbtGit.versionWithGit
 
   lazy val sbtEcho = Project(
     id = "sbt-echo",
@@ -30,10 +32,10 @@ object SbtEchoBuild extends Build {
     ) ++ Dependency.playPlugin
   )
 
-  lazy val defaultSettings: Seq[Setting[_]] = Defaults.defaultSettings ++ crossBuildSettings ++ Seq(
+  lazy val defaultSettings: Seq[Setting[_]] = Defaults.defaultSettings ++ crossBuildSettings ++ baseVersions ++ Seq(
     sbtPlugin := true,
     organization := "com.typesafe.sbt",
-    version := Version,
+    version <<= version in ThisBuild,
     publishMavenStyle := false,
     publishTo <<= isSnapshot { snapshot =>
       if (snapshot) Some(Classpaths.sbtPluginSnapshots) else Some(Classpaths.sbtPluginReleases)
