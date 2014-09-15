@@ -40,7 +40,7 @@ object SbtEchoBuild extends Build {
     },
     sbt.CrossBuilding.latestCompatibleVersionMapper ~= {
       original => {
-        case "0.13" => "0.13.5"
+        case "0.13" => "0.13.6"
         case x => original(x)
       }
     }
