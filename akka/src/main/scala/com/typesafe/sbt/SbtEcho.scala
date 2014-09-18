@@ -7,7 +7,7 @@ import sbt._
 import sbt.Keys._
 import java.net.URI
 
-object SbtEcho extends Plugin {
+object SbtEcho extends AutoPlugin {
   import echo.EchoRun._
 
   val EchoVersion = "0.1.6"
@@ -50,7 +50,10 @@ object SbtEcho extends Plugin {
 
   import EchoKeys._
 
-  lazy val echoSettings: Seq[Setting[_]] = echoCompileSettings
+  override def trigger = AllRequirements
+  override def requires = plugins.JvmPlugin
+
+  override lazy val projectSettings: Seq[Setting[_]] = echoCompileSettings
 
   def echoCompileSettings: Seq[Setting[_]] = {
     inConfig(Echo)(echoDefaultSettings(Runtime, EchoTraceCompile)) ++

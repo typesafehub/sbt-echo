@@ -8,13 +8,17 @@ import sbt.Keys._
 import play.PlayImport._
 import PlayKeys.playVersion
 
-object SbtEchoPlay extends Plugin {
+object SbtEchoPlay extends AutoPlugin {
   import SbtEcho._
   import SbtEcho.EchoKeys._
   import echo.EchoPlayRun._
   import echo.EchoRun.EchoTraceCompile
 
-  lazy val echoPlaySettings: Seq[Setting[_]] = echoCompileSettings ++ inConfig(Echo)(tracePlaySettings) ++ echoPlayRunSettings
+  override def trigger = AllRequirements
+  override def requires = play.Play && SbtEcho
+
+  override lazy val projectSettings: Seq[Setting[_]] =
+    inConfig(Echo)(tracePlaySettings) ++ echoPlayRunSettings
 
   def tracePlaySettings(): Seq[Setting[_]] = Seq(
     tracePlayVersion <<= playVersion map supportedPlayVersion,
