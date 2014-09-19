@@ -22,6 +22,5 @@ object SbtEchoPlay extends AutoPlugin {
 
   def tracePlaySettings(): Seq[Setting[_]] = Seq(
     tracePlayVersion <<= playVersion map supportedPlayVersion,
-    traceDependencies <<= (libraryDependencies, tracePlayVersion, echoVersion) map tracePlayDependencies
-  )
+    traceDependencies <<= (libraryDependencies, tracePlayVersion, echoVersion) map tracePlayDependencies)
 }

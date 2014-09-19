@@ -63,7 +63,7 @@ object SbtEcho extends AutoPlugin {
 
   def echoTestSettings: Seq[Setting[_]] =
     inConfig(EchoTest)(echoDefaultSettings(Test, EchoTraceTest)) ++
-    inConfig(EchoTest)(echoRunSettings(Test))
+      inConfig(EchoTest)(echoRunSettings(Test))
 
   def echoDefaultSettings(extendConfig: Configuration, classpathConfig: Configuration): Seq[Setting[_]] = Seq(
     echoVersion := EchoVersion,
@@ -100,8 +100,7 @@ object SbtEcho extends AutoPlugin {
     externalDependencyClasspath <<= Classpaths.concat(unmanagedClasspath, managedClasspath),
     dependencyClasspath <<= Classpaths.concat(internalDependencyClasspath, externalDependencyClasspath),
     exportedProducts <<= exportedProducts in extendConfig,
-    fullClasspath <<= Classpaths.concatDistinct(exportedProducts, dependencyClasspath)
-  )
+    fullClasspath <<= Classpaths.concatDistinct(exportedProducts, dependencyClasspath))
 
   def echoRunSettings(extendConfig: Configuration): Seq[Setting[_]] = Seq(
     mainClass in run <<= mainClass in run in extendConfig,
@@ -109,8 +108,7 @@ object SbtEcho extends AutoPlugin {
     run <<= Defaults.runTask(fullClasspath, mainClass in run, runner in run),
     runMain <<= Defaults.runMainTask(fullClasspath, runner in run),
     UIKeys.backgroundRunMain <<= SbtBackgroundRunPlugin.backgroundRunMainTask(fullClasspath, runner in run),
-    UIKeys.backgroundRun <<= SbtBackgroundRunPlugin.backgroundRunTask(fullClasspath, mainClass in run, runner in run)
-  )
+    UIKeys.backgroundRun <<= SbtBackgroundRunPlugin.backgroundRunTask(fullClasspath, mainClass in run, runner in run))
 
   def echoUnscopedSettings: Seq[Setting[_]] = Seq(
     ivyConfigurations ++= Seq(EchoTraceCompile, EchoTraceTest, EchoWeave, EchoSigar),
@@ -120,8 +118,7 @@ object SbtEcho extends AutoPlugin {
     libraryDependencies <++= (aspectjVersion in Echo)(weaveDependencies),
     libraryDependencies <++= (echoVersion in Echo)(sigarDependencies),
 
-    allDependencies <++= traceDependencies in Echo
-  )
+    allDependencies <++= traceDependencies in Echo)
 
   def traceAkka(akkaVersion: String) = {
     traceAkkaVersion in Echo := supportedAkkaVersion(akkaVersion)
