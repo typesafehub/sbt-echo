@@ -21,7 +21,7 @@ object EchoRun {
   val Akka23Version = "2.3.4"
 
   val EchoTraceCompile = config("echo-trace-compile").extend(Configurations.RuntimeInternal).hide
-  val EchoTraceTest    = config("echo-trace-test").extend(EchoTraceCompile, Configurations.TestInternal).hide
+  val EchoTraceTest = config("echo-trace-test").extend(EchoTraceCompile, Configurations.TestInternal).hide
 
   val EchoWeave = config("echo-weave").hide
   val EchoSigar = config("echo-sigar").hide
@@ -44,18 +44,18 @@ object EchoRun {
   }
 
   def supportedAkkaVersion(akkaVersion: String): Option[String] = {
-    if      (akkaVersion startsWith "2.0.") Some(Akka20Version)
+    if (akkaVersion startsWith "2.0.") Some(Akka20Version)
     else if (akkaVersion startsWith "2.1.") Some(Akka21Version)
     else if (akkaVersion startsWith "2.2.") Some(Akka22Version)
     else if (akkaVersion startsWith "2.3.") Some(Akka23Version)
-    else    None
+    else None
   }
 
   def selectTraceDependencies(dependencies: Seq[ModuleID], traceAkkaVersion: Option[String], echoVersion: String, scalaVersion: String): Seq[ModuleID] = {
     if (containsTrace(dependencies)) Seq.empty[ModuleID]
     else traceAkkaVersion match {
       case Some(akkaVersion) => traceAkkaDependencies(akkaVersion, echoVersion, scalaVersion)
-      case None              => Seq.empty[ModuleID]
+      case None => Seq.empty[ModuleID]
     }
   }
 
@@ -67,26 +67,23 @@ object EchoRun {
     module.organization == "com.typesafe.akka" && module.name.startsWith("akka-")
   } map (_.revision)
 
-
   def traceAkkaDependencies(akkaVersion: String, echoVersion: String, scalaVersion: String): Seq[ModuleID] = {
     val crossVersion = akkaCrossVersion(akkaVersion, scalaVersion)
     Seq("com.typesafe.trace" % ("trace-akka-" + akkaVersion) % echoVersion % EchoTraceCompile.name cross crossVersion)
   }
 
   def akkaCrossVersion(akkaVersion: String, scalaVersion: String): CrossVersion = {
-    if      (akkaVersion startsWith "2.0.") CrossVersion.Disabled
+    if (akkaVersion startsWith "2.0.") CrossVersion.Disabled
     else if (akkaVersion startsWith "2.1.") CrossVersion.Disabled
-    else if (scalaVersion contains "-")     CrossVersion.full
-    else                                    CrossVersion.binary
+    else if (scalaVersion contains "-") CrossVersion.full
+    else CrossVersion.binary
   }
 
   def weaveDependencies(version: String) = Seq(
-    "org.aspectj" % "aspectjweaver" % version % EchoWeave.name
-  )
+    "org.aspectj" % "aspectjweaver" % version % EchoWeave.name)
 
   def sigarDependencies(version: String) = Seq(
-    "com.typesafe.trace" % "trace-sigar-libs" % version % EchoSigar.name
-  )
+    "com.typesafe.trace" % "trace-sigar-libs" % version % EchoSigar.name)
 
   def collectTracedClasspath(config: Configuration): Initialize[Task[Classpath]] =
     (classpathTypes, update, streams) map { (types, report, s) =>
@@ -106,11 +103,12 @@ object EchoRun {
     update map { report => report.matching(moduleFilter(organization = "org.fusesource", name = "sigar")) headOption }
 
   def seqToConfig(seq: Seq[(String, Any)], indent: Int, quote: Boolean): String = {
-    seq map { case (k, v) =>
-      val indented = " " * indent
-      val key = if (quote) "\"%s\"" format k else k
-      val value = v
-      "%s%s = %s" format (indented, key, value)
+    seq map {
+      case (k, v) =>
+        val indented = " " * indent
+        val key = if (quote) "\"%s\"" format k else k
+        val value = v
+        "%s%s = %s" format (indented, key, value)
     } mkString ("\n")
   }
 
@@ -155,8 +153,7 @@ object EchoRun {
       val configResource = sys.props.getOrElse("config.resource", "application.conf")
       writeConfigFiles(confDir, name, Seq(
         "echo.conf" -> conf,
-        configResource -> includes
-      ))
+        configResource -> includes))
     }
 
   def writeConfigFiles(base: File, name: String, configs: Seq[(String, String)]): File = {

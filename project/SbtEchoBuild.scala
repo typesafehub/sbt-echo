@@ -3,6 +3,8 @@ import sbt._
 import sbt.Keys._
 import net.virtualvoid.sbt.cross.CrossPlugin
 import com.typesafe.sbt.SbtGit
+import com.typesafe.sbt.SbtScalariform
+import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 
 object SbtEchoBuild extends Build {
   def baseVersions: Seq[Setting[_]] = SbtGit.versionWithGit
@@ -32,7 +34,13 @@ object SbtEchoBuild extends Build {
     ) ++ Dependency.playPlugin
   )
 
-  lazy val defaultSettings: Seq[Setting[_]] = Defaults.defaultSettings ++ crossBuildSettings ++ baseVersions ++ Seq(
+  def formatPrefs = {
+    import scalariform.formatter.preferences._
+    FormattingPreferences()
+      .setPreference(IndentSpaces, 2)
+  }
+
+  lazy val defaultSettings: Seq[Setting[_]] = Defaults.defaultSettings ++ crossBuildSettings ++ baseVersions ++ SbtScalariform.scalariformSettings ++ Seq(
     sbtPlugin := true,
     organization := "com.typesafe.sbt",
     version <<= version in ThisBuild,
@@ -45,7 +53,9 @@ object SbtEchoBuild extends Build {
         case "0.13" => "0.13.6"
         case x => original(x)
       }
-    }
+    },
+    ScalariformKeys.preferences in Compile := formatPrefs,
+    ScalariformKeys.preferences in Test    := formatPrefs
   )
 
   lazy val crossBuildSettings: Seq[Setting[_]] = CrossPlugin.crossBuildingSettings ++ CrossBuilding.scriptedSettings ++ Seq(

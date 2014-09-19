@@ -19,14 +19,13 @@ object EchoPlayRun {
   val Play23Version = "2.3.3"
 
   def echoPlayRunSettings(): Seq[Setting[_]] = Seq(
-    weavingClassLoader in Echo <<= (sigar in Echo) map createWeavingClassLoader
-  ) ++ EchoPlaySpecific.echoPlaySpecificSettings
+    weavingClassLoader in Echo <<= (sigar in Echo) map createWeavingClassLoader) ++ EchoPlaySpecific.echoPlaySpecificSettings
 
   def tracePlayDependencies(dependencies: Seq[ModuleID], tracePlayVersion: Option[String], echoVersion: String): Seq[ModuleID] = {
     if (containsTracePlay(dependencies)) Seq.empty[ModuleID]
     else tracePlayVersion match {
       case Some(playVersion) => Seq(tracePlayDependency(playVersion, echoVersion))
-      case None              => Seq.empty[ModuleID]
+      case None => Seq.empty[ModuleID]
     }
   }
 
@@ -35,10 +34,10 @@ object EchoPlayRun {
     else "com.typesafe.trace" % ("trace-play-" + playVersion) % echoVersion % EchoTraceCompile.name cross CrossVersion.Disabled
 
   def supportedPlayVersion(playVersion: String): Option[String] = {
-    if      (playVersion startsWith "2.1.") Some(Play21Version)
+    if (playVersion startsWith "2.1.") Some(Play21Version)
     else if (playVersion startsWith "2.2.") Some(Play22Version)
     else if (playVersion startsWith "2.3.") Some(Play23Version)
-    else    None
+    else None
   }
 
   def containsTracePlay(dependencies: Seq[ModuleID]): Boolean = dependencies exists { module =>

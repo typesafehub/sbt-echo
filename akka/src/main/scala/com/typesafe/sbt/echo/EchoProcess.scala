@@ -88,7 +88,7 @@ object EchoProcess {
       val currentThread = Thread.currentThread
       val oldLoader = currentThread.getContextClassLoader()
       currentThread.setContextClassLoader(loader)
-      try { main.invoke(null, options.toArray[String].asInstanceOf[Array[String]] ) }
+      try { main.invoke(null, options.toArray[String].asInstanceOf[Array[String]]) }
       finally { currentThread.setContextClassLoader(oldLoader) }
     }
   }
