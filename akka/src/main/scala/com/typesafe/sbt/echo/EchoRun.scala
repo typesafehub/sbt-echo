@@ -19,6 +19,7 @@ object EchoRun {
   val Akka21Version = "2.1.4"
   val Akka22Version = "2.2.4"
   val Akka23Version = "2.3.4"
+  val supportedAkkaVersions = Seq(Akka20Version, Akka21Version, Akka22Version, Akka23Version)
 
   val EchoTraceCompile = config("echo-trace-compile").extend(Configurations.RuntimeInternal).hide
   val EchoTraceTest = config("echo-trace-test").extend(EchoTraceCompile, Configurations.TestInternal).hide
@@ -49,6 +50,20 @@ object EchoRun {
     else if (akkaVersion startsWith "2.2.") Some(Akka22Version)
     else if (akkaVersion startsWith "2.3.") Some(Akka23Version)
     else None
+  }
+
+  def akkaVersionReport(akkaVersionOption: Option[String]): String = {
+    akkaVersionOption match {
+      case Some(akkaVersion) =>
+        supportedAkkaVersion(akkaVersion) match {
+          case Some(supported) =>
+            s"Inspect supports Akka $supported and this project has compatible version $akkaVersion."
+          case None =>
+            s"This project's Akka version $akkaVersion is not supported; supported versions are ${supportedAkkaVersions.mkString(",")}"
+        }
+      case None =>
+        s"This project does not appear to depend on any known version of Akka. Supported Akka versions are ${supportedAkkaVersions.mkString(",")}."
+    }
   }
 
   def selectTraceDependencies(dependencies: Seq[ModuleID], traceAkkaVersion: Option[String], echoVersion: String, scalaVersion: String): Seq[ModuleID] = {
@@ -88,9 +103,26 @@ object EchoRun {
   def collectTracedClasspath(config: Configuration): Initialize[Task[Classpath]] =
     (classpathTypes, update, streams) map { (types, report, s) =>
       val classpath = Classpaths.managedJars(config, types, report)
-      val tracedAkka = classpath count (_.metadata.get(Keys.moduleID.key).map(_.name).getOrElse("").startsWith("trace-akka-"))
-      if (tracedAkka < 1) s.log.warn("No trace dependencies for Activator.")
-      if (tracedAkka > 1) s.log.warn("Multiple trace dependencies for Activator.")
+
+      // Print some handy diagnostics about what ended up on the classpath
+      def logFor(modulePrefix: String): Unit = {
+        val traced = classpath
+          .flatMap(_.metadata.get(Keys.moduleID.key).toSeq)
+          .filter(_.name.startsWith(s"$modulePrefix-"))
+          // drop trace-play-common
+          .filterNot(_.name.startsWith(s"$modulePrefix-common"))
+
+        if (traced.isEmpty) {
+          // we always trace akka, but only trace play on play projects
+          if (modulePrefix == "trace-akka")
+            s.log.warn(s"$modulePrefix jars for Inspect have not been added to the classpath.")
+        } else if (traced.size > 1) s.log.error(s"Somehow multiple $modulePrefix jars for Inspect are on the classpath: $traced")
+        else s.log.info(s"$modulePrefix jar for Inspect is on the echo:run classpath ${traced.head}")
+      }
+
+      logFor("trace-akka")
+      logFor("trace-play")
+
       classpath
     }
 
@@ -172,16 +204,18 @@ object EchoRun {
     }
   }
 
-  def echoRunner: Initialize[Task[ScalaRun]] =
-    (baseDirectory, javaOptions, outputStrategy, fork, javaHome, trapExit, connectInput, traceOptions, sigar) map {
-      (base, options, strategy, forkRun, javaHomeDir, trap, connectIn, traceOpts, sigar) =>
-        if (forkRun) {
-          val forkConfig = ForkOptions(javaHomeDir, strategy, Seq.empty, Some(base), options ++ traceOpts, connectIn)
-          new EchoForkRun(forkConfig)
-        } else {
-          new EchoDirectRun(trap, sigar)
-        }
+  def echoRunner: Initialize[Task[ScalaRun]] = Def.task {
+    if (!(echoTraceSupported in Echo).value) {
+      val message = s"Inspect tracing does not work with this project. ${(echoAkkaVersionReport in Echo).value}"
+      streams.value.log.error(message)
+      sys.error(message)
+    } else if (fork.value) {
+      val forkConfig = ForkOptions(javaHome.value, outputStrategy.value, Seq.empty, Some(baseDirectory.value), javaOptions.value ++ traceOptions.value, connectInput.value)
+      new EchoForkRun(forkConfig)
+    } else {
+      new EchoDirectRun(trapExit.value, sigar.value)
     }
+  }
 
   class EchoForkRun(forkConfig: ForkScalaRun) extends ScalaRun {
     def run(mainClass: String, classpath: Seq[File], options: Seq[String], log: Logger): Option[String] = {
