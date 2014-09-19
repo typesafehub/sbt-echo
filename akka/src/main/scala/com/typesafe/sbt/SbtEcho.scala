@@ -42,9 +42,12 @@ object SbtEcho extends AutoPlugin {
     val traceOptions = TaskKey[Seq[String]]("echo-trace-options")
     val traceAkkaVersion = TaskKey[Option[String]]("echo-trace-akka-version")
     val traceDependencies = TaskKey[Seq[ModuleID]]("echo-trace-dependencies")
+    val echoTraceSupported = taskKey[Boolean]("Whether the echo:run and echo:backgroundRun tasks should work on this project")
+    val echoAkkaVersionReport = taskKey[String]("String explaining how actual Akka version relates to supported versions")
 
     // play keys
     val tracePlayVersion = TaskKey[Option[String]]("echo-trace-play-version")
+    val echoPlayVersionReport = taskKey[String]("String explaining how actual Play version relates to supported versions")
     val weavingClassLoader = TaskKey[(String, Array[URL], ClassLoader) => ClassLoader]("echo-weaving-class-loader")
   }
 
@@ -91,6 +94,9 @@ object SbtEcho extends AutoPlugin {
     traceOptions <<= (aspectjWeaver, sigarLibs) map traceJavaOptions,
 
     traceAkkaVersion <<= libraryDependencies map selectAkkaVersion,
+    echoAkkaVersionReport := { akkaVersionReport(findAkkaVersion(libraryDependencies.value)) },
+    // play plugin overrides this
+    echoPlayVersionReport := { "The SbtEchoPlay plugin is not enabled for this project." },
     traceDependencies <<= (libraryDependencies, traceAkkaVersion, echoVersion, scalaVersion) map selectTraceDependencies,
 
     unmanagedClasspath <<= unmanagedClasspath in extendConfig,
@@ -100,7 +106,8 @@ object SbtEcho extends AutoPlugin {
     externalDependencyClasspath <<= Classpaths.concat(unmanagedClasspath, managedClasspath),
     dependencyClasspath <<= Classpaths.concat(internalDependencyClasspath, externalDependencyClasspath),
     exportedProducts <<= exportedProducts in extendConfig,
-    fullClasspath <<= Classpaths.concatDistinct(exportedProducts, dependencyClasspath))
+    fullClasspath <<= Classpaths.concatDistinct(exportedProducts, dependencyClasspath),
+    echoTraceSupported := traceAkkaVersion.value.isDefined)
 
   def echoRunSettings(extendConfig: Configuration): Seq[Setting[_]] = Seq(
     mainClass in run <<= mainClass in run in extendConfig,

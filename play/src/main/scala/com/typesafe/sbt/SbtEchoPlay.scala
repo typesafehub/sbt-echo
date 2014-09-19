@@ -22,5 +22,10 @@ object SbtEchoPlay extends AutoPlugin {
 
   def tracePlaySettings(): Seq[Setting[_]] = Seq(
     tracePlayVersion <<= playVersion map supportedPlayVersion,
+    // we SHOULD require that the akka version is also supported, but commented out
+    // for now because the check for akka does not chase transitive deps, so if
+    // someone only explicitly depends on play, the akka code thinks we don't support akka.
+    echoTraceSupported := { /* echoTraceSupported.value && */ tracePlayVersion.value.isDefined },
+    echoPlayVersionReport := { playVersionReport(Some(playVersion.value)) },
     traceDependencies <<= (libraryDependencies, tracePlayVersion, echoVersion) map tracePlayDependencies)
 }

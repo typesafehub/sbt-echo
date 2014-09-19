@@ -7,6 +7,4 @@ libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.3.4"
 
 libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % "2.3.4" % "test"
 
-echoSettings
-
-echoTestSettings
+com.typesafe.sbt.SbtEcho.echoTestSettings

@@ -17,6 +17,7 @@ object EchoPlayRun {
   val Play21Version = "2.1.5"
   val Play22Version = "2.2.3"
   val Play23Version = "2.3.3"
+  val supportedPlayVersions = Seq(Play21Version, Play22Version, Play23Version)
 
   def echoPlayRunSettings(): Seq[Setting[_]] = Seq(
     weavingClassLoader in Echo <<= (sigar in Echo) map createWeavingClassLoader) ++ EchoPlaySpecific.echoPlaySpecificSettings
@@ -38,6 +39,20 @@ object EchoPlayRun {
     else if (playVersion startsWith "2.2.") Some(Play22Version)
     else if (playVersion startsWith "2.3.") Some(Play23Version)
     else None
+  }
+
+  def playVersionReport(playVersionOption: Option[String]): String = {
+    playVersionOption match {
+      case Some(playVersion) =>
+        supportedPlayVersion(playVersion) match {
+          case Some(supported) =>
+            s"Inspect supports Play $supported and this project has compatible version $playVersion."
+          case None =>
+            s"This project's Play version $playVersion is not supported; supported versions are ${supportedPlayVersions.mkString(",")}"
+        }
+      case None =>
+        s"This project does not appear to depend on any known version of Play. Supported Akka versions are ${supportedPlayVersions.mkString(",")}."
+    }
   }
 
   def containsTracePlay(dependencies: Seq[ModuleID]): Boolean = dependencies exists { module =>
