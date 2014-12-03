@@ -3,7 +3,7 @@ import sbt.Keys._
 import net.virtualvoid.sbt.cross.CrossPlugin
 
 object SbtEchoBuild extends Build {
-  val Version = "0.1.6-SNAPSHOT"
+  val Version = "0.1.6.1"
 
   lazy val sbtEcho = Project(
     id = "sbt-echo",
@@ -65,7 +65,7 @@ object SbtEchoBuild extends Build {
       libraryDependencies <+= (sbtVersion in sbtPlugin, scalaBinaryVersion in update) { (sbtV, scalaV) =>
         val dependency = sbtV match {
           case "0.12" => "play" % "sbt-plugin" % "2.1.5" exclude("com.github.scala-incubator.io", "scala-io-core_2.9.1") exclude("com.github.scala-incubator.io", "scala-io-file_2.9.1")
-          case "0.13" => "com.typesafe.play" % "sbt-plugin" % "2.3.3"
+          case "0.13" => "com.typesafe.play" % "sbt-plugin" % "2.3.6"
           case _ => sys.error("Unsupported sbt version: " + sbtV)
         }
         Defaults.sbtPluginExtra(dependency, sbtV, scalaV)
